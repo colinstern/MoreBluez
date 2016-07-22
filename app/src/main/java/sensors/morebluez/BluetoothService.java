@@ -5,8 +5,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 /**
@@ -16,7 +21,9 @@ public class BluetoothService {
     private final BluetoothAdapter mAdapter;
     private AcceptThread mSecureAcceptThread;
     private AcceptThread mInsecureAcceptThread;
-    public final int mState;
+    private ConnectedThread mConnectedThread;
+    private final Handler mHandler;
+    private int mState;
 
     // Constants that indicate the current connection state
     public static final int STATE_NONE = 0;       // we're doing nothing
@@ -31,13 +38,18 @@ public class BluetoothService {
     private static final UUID MY_UUID =
             UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
 
-    public BluetoothService(Context context) {
+    public BluetoothService(Context context, Handler handler) {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
         mState = STATE_NONE;
+        mHandler = handler;
     }
 
     public synchronized int getState() {
         return mState;
+    }
+
+    public synchronized void setState(int state) {
+        mState = state;
     }
 
     public synchronized void start() {
@@ -46,6 +58,20 @@ public class BluetoothService {
             mSecureAcceptThread = new AcceptThread();
             mSecureAcceptThread.start();
         }
+    }
+    public synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
+        mConnectedThread = new ConnectedThread(socket);
+        mConnectedThread.start();
+
+        //Send the name of the connected device back to the UI activity
+        Message msg = mHandler.obtainMessage(Constants.MESSAGE_DEVICE_NAME);
+        Bundle bundle = new Bundle();
+        bundle.putString(Constants.DEVICE_NAME, device.getName());
+        msg.setData(bundle);
+        mHandler.sendMessage(msg);
+
+        setState(STATE_CONNECTED);
+
     }
 
 
@@ -74,7 +100,7 @@ public class BluetoothService {
                 //If a connection was accepted
                 if (socket != null) {
                     //Do work to manage the connection in a separate thread
-                    connected(socket);
+                    connected(socket, socket.getRemoteDevice());
                     try {
                         mmServerSocket.close();
                     } catch (IOException e) { }
@@ -122,7 +148,7 @@ public class BluetoothService {
             }
 
 //            Do work to manage the connection in a separate thread
-            connected(mmSocket); //TODO implement ConnectedThread and connect()
+            connected(mmSocket, mmDevice); //TODO implement ConnectedThread and connect()
         }
 
         /*Cancel an in-progress connection and close the socket*/
@@ -132,6 +158,59 @@ public class BluetoothService {
             } catch (IOException e) { }
         }
 
+    }
+
+    private class ConnectedThread extends Thread {
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+
+        public ConnectedThread(BluetoothSocket socket) {
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+            //Get bluetooth input and output streams
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e) { }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[1024]; // buffer store for the stream
+            int bytes; // bytes returned from read()
+
+            // Keep listening to the InputStream until an exception occurs
+            while (true) {
+                try {
+                    //Read from the InputStream
+                    bytes = mmInStream.read(buffer);
+                    // Send the obtained bytes to the UI activity
+                    mHandler.obtainMessage(Constants.MESSAGE_READ, bytes, -1, buffer)
+                            .sendToTarget();
+                } catch (IOException e) {
+                    break;
+                }
+            }
+        }
+
+        /*Call this from the main activity to send data to the remote device*/
+        public void write(byte[] bytes) {
+            try {
+                mmOutStream.write(bytes);
+            } catch (IOException e) { }
+        }
+
+        /*Call this from the main activity to shutdown the connection*/
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) { }
+        }
     }
 
 }
