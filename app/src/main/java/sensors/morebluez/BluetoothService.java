@@ -4,14 +4,20 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.widget.ArrayAdapter;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,6 +29,7 @@ public class BluetoothService {
     private AcceptThread mInsecureAcceptThread;
     private ConnectedThread mConnectedThread;
     private final Handler mHandler;
+    private final ArrayList<String> mArrayList;
     private int mState;
 
     // Constants that indicate the current connection state
@@ -40,6 +47,7 @@ public class BluetoothService {
 
     public BluetoothService(Context context, Handler handler) {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
+        mArrayList = new ArrayList<String>();
         mState = STATE_NONE;
         mHandler = handler;
     }
@@ -73,7 +81,6 @@ public class BluetoothService {
         setState(STATE_CONNECTED);
 
     }
-
 
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
