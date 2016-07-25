@@ -4,4 +4,5 @@
     <string name="edit_message">Enter a message</string>
     <string name="button_send">Send</string>
     <string name="none_paired">No devices have been paired</string>
+    <string name="intro_message">This application allows for the transfer of data from iShadow to an Android device.</string>
 </resources>
