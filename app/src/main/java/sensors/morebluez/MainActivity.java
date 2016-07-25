@@ -13,6 +13,8 @@ import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static TextView textbox;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,16 +28,8 @@ public class MainActivity extends AppCompatActivity {
             transaction.commit();
         }
 
-        TextView textbox = (TextView) findViewById(R.id.textbox);
-        int global = 0;
-        for (int k = 2; k < 5000; k++) {
-            boolean isPrime = true;
-            for (int j = 2; j < k; j++)
-                if (k % j == 0) { isPrime = false; break; }
-            if (!isPrime) continue;
-            global ++;
-            textbox.append(String.format("\nPrime #%d is %,d", global, k));
-        }
+        textbox = (TextView) findViewById(R.id.textbox);
+        textbox.setText(R.string.intro_message);
     }
 
     @Override

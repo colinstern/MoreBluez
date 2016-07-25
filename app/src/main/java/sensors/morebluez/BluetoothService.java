@@ -82,6 +82,18 @@ public class BluetoothService {
 
     }
 
+    public void connectionLost() {
+        //Send a failure message back to the activity
+        Message msg = mHandler.obtainMessage(Constants.MESSAGE_TOAST);
+        Bundle bundle = new Bundle();
+        bundle.putString(Constants.TOAST, "Device connection was lost");
+        msg.setData(bundle);
+        mHandler.sendMessage(msg);
+
+        // Start the service over to restart listening mode
+        BluetoothService.this.start();
+    }
+
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
 
@@ -200,6 +212,9 @@ public class BluetoothService {
                     mHandler.obtainMessage(Constants.MESSAGE_READ, bytes, -1, buffer)
                             .sendToTarget();
                 } catch (IOException e) {
+                    connectionLost();
+                    // Start service over again
+                    BluetoothService.this.start();
                     break;
                 }
             }
