@@ -5,4 +5,8 @@
     <string name="button_send">Send</string>
     <string name="none_paired">No devices have been paired</string>
     <string name="intro_message">This application allows for the transfer of data from iShadow to an Android device.</string>
+    <string name="title_other_devices">Other Available Devices</string>
+    <string name="title_paired_devices">Paired Devices</string>
+    <string name="button_scan">Scan for devices</string>
+    <string name="scanning">scanning for devices...</string>
 </resources>

@@ -8,7 +8,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.view.View;
+import android.view.Window;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 
 import java.util.Set;
 
@@ -24,6 +27,22 @@ public class DeviceListActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        //Setup the window
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+        setContentView(R.layout.activity_device_list);
+
+        //Set result CANCELED in case the user backs out
+        setResult(Activity.RESULT_CANCELED);
+
+        //Initialize the button to perform device discovery
+        Button scanButton = (Button) findViewById(R.id.button_scan);
+        scanButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                doDiscovery();
+                v.setVisibility(View.GONE);
+            }
+        });
 
 
 
@@ -66,6 +85,24 @@ public class DeviceListActivity extends Activity {
 
         // Unregister broadcast listeners
         this.unregisterReceiver(mReceiver);
+    }
+
+    private void doDiscovery() {
+        // Indicate scanning in the title
+        setProgressBarIndeterminateVisibility(true);
+        setTitle(R.string.scanning);
+
+        //Turn on sub-title for new devices
+        findViewById(R.id.title_new_devices).setVisibility(View.VISIBLE);
+
+        //If we're already discovering, stop it
+        if (mBtAdapter.isDiscovering()) {
+            mBtAdapter.cancelDiscovery();
+        }
+
+        //Request discover from BluetoothAdapter
+        mBtAdapter.startDiscovery();
+
     }
 
     /* The broadcastReceiver that listens for sidcovered devices and changes the title when

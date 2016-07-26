@@ -3,13 +3,18 @@ package sensors.morebluez;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,6 +22,16 @@ import android.widget.Toast;
  * Created by cost on 7/22/16.
  */
 public class BluetoothFragment extends Fragment {
+    TextViewAppender mCallback;
+
+    // Layout view
+    private TextView mViewText;
+
+    // Container activity must implement this interface
+    public interface TextViewAppender {
+        public void sendText(String text);
+    }
+
 
     //Request codes
     public static final int REQUEST_ENABLE_BT = 3;
@@ -28,6 +43,18 @@ public class BluetoothFragment extends Fragment {
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private BluetoothService mBtService = null;
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_bluetooth, container, false);
+    }
+
+    @Override
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        mViewText = (TextView) view.findViewById(R.id.fragTextView);
+
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -59,8 +86,10 @@ public class BluetoothFragment extends Fragment {
                 mBtService.start();
             }
         }
-//        MainActivity.textbox = (TextView) get.findViewById(R.id.textbox);
-//        MainActivity.textbox.append("help me! i'm in a fragment!");
+
+        Intent i = new Intent(getActivity().getApplicationContext(), MainActivity.class);
+        i.putExtra("name", "Jesus");
+        startActivity(i);
     }
 
     private void setupService() {
@@ -102,7 +131,6 @@ public class BluetoothFragment extends Fragment {
         @Override
         public void handleMessage(Message msg) {
             FragmentActivity activity = getActivity();
-            TextView textbox = (TextView) getView().findViewById(R.id.textbox);
             switch (msg.what) {
                 case Constants.MESSAGE_STATE_CHANGE:
                     switch (msg.arg1) {
@@ -122,13 +150,13 @@ public class BluetoothFragment extends Fragment {
                     byte[] writeBuf = (byte[]) msg.obj;
                     // construct a string from the buffer
                     String writeMessage = new String(writeBuf);
-                    textbox.append("Me:  " + writeMessage);
+                    mViewText.append("Me:  " + writeMessage);
                     break;
                 case Constants.MESSAGE_READ:
                     byte[] readBuf = (byte[]) msg.obj;
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
-                    textbox.append(mConnectedDeviceName + ":  " + readMessage);
+                    mViewText.append(mConnectedDeviceName + ":  " + readMessage);
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
