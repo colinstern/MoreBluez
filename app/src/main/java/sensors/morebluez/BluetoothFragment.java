@@ -3,6 +3,7 @@ package sensors.morebluez;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -12,8 +13,12 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,6 +30,7 @@ public class BluetoothFragment extends Fragment {
     TextViewAppender mCallback;
 
     // Layout view
+    private ListView mConversationView;
     private TextView mViewText;
 
     // Container activity must implement this interface
@@ -32,14 +38,20 @@ public class BluetoothFragment extends Fragment {
         public void sendText(String text);
     }
 
-
-    //Request codes
-    public static final int REQUEST_ENABLE_BT = 3;
+    // Intent request codes
+    private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
+    private static final int REQUEST_CONNECT_DEVICE_INSECURE = 2;
+    private static final int REQUEST_ENABLE_BT = 3;
 
     /**
      * Name of the connected device
      */
     private String mConnectedDeviceName = null;
+
+    /**
+     * Array adapter for the conversation thread
+     */
+    private ArrayAdapter<String> mConversationArrayAdapter;
 
     BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private BluetoothService mBtService = null;
@@ -52,8 +64,22 @@ public class BluetoothFragment extends Fragment {
 
     @Override
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        mConversationView = (ListView) view.findViewById(R.id.in);
         mViewText = (TextView) view.findViewById(R.id.fragTextView);
 
+    }
+
+    /**
+     * Set up the UI and the background operations for chat.
+     */
+    private void setupChat() {
+        // Initialize the array adapter for the conversation thread
+        mConversationArrayAdapter = new ArrayAdapter<String>(getActivity(), R.layout.message);
+
+        mConversationView.setAdapter(mConversationArrayAdapter);
+
+        // Initialize the BluetoothChatService to perform bluetooth connections
+        mBtService = new BluetoothService(getActivity(), mHandler);
     }
 
     @Override
@@ -175,5 +201,74 @@ public class BluetoothFragment extends Fragment {
             }
         }
     };
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case REQUEST_CONNECT_DEVICE_SECURE:
+                // When DeviceListActivity returns with a device to connect
+                if (resultCode == Activity.RESULT_OK) {
+                    connectDevice(data, true);
+                }
+                break;
+            case REQUEST_CONNECT_DEVICE_INSECURE:
+                // When DeviceListActivity returns with a device to connect
+                if (resultCode == Activity.RESULT_OK) {
+                    connectDevice(data, false);
+                }
+                break;
+            case REQUEST_ENABLE_BT:
+                // When the request to enable Bluetooth returns
+                if (requestCode == Activity.RESULT_OK) {
+                    // Bluetooth is now enabled, so set up a chat session
+                    setupChat();
+                } else {
+                    // USer did not enable Bluetooth or an error occurred
+                    Toast.makeText(getActivity(), R.string.bt_not_enabled_leaving,
+                            Toast.LENGTH_SHORT).show();
+                    getActivity().finish();
+                }
+        }
+    }
+
+    /**
+     * Establish connection with other device.
+     */
+    private void  connectDevice(Intent data, boolean secure) {
+        // Get the device MAC address
+        String address = data.getExtras()
+                .getString(DeviceListActivity.EXTRA_DEVICE_ADDRESS);
+        // get the BluetoothDevice object
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+        // Attempt to connect to the device
+        mBtService.connect(device, secure);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.bluetooth, menu);
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.secure_connect_scan:{
+                // Launch the DeviceListActivity to see devices and do scan
+                Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
+                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
+                return true;
+            }
+            case R.id.insecure_connect_scan: {
+                // Launch the DeviceListActivity to see devices and do scan
+                Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
+                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
+                return true;
+            }
+            case R.id.discoverable: {
+                // Ensure this device is discoverable by others
+                ensureDiscoveable();
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

@@ -10,8 +10,11 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.Set;
 
@@ -20,9 +23,16 @@ import java.util.Set;
  */
 public class DeviceListActivity extends Activity {
 
+    /**
+     * Return Intent extra
+     */
+    public static String EXTRA_DEVICE_ADDRESS = "device_address";
+
     private BluetoothAdapter mBtAdapter;
 
     private ArrayAdapter<String> mNewDevicesArrayAdapter;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +61,16 @@ public class DeviceListActivity extends Activity {
         ArrayAdapter<String> pairedDevicesArrayAdapter =
                 new ArrayAdapter<String>(this, R.layout.device_name);
         mNewDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
+
+        // Find and set u[ the ListView for paired devices
+        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
+        pairedListView.setAdapter(pairedDevicesArrayAdapter);
+        pairedListView.setOnItemClickListener(mDeviceClickListener);
+
+        // Find and set up the ListView for newly discovered devices
+        ListView newDevicesListView = (ListView) findViewById(R.id.new_devices);
+        newDevicesListView.setAdapter(mNewDevicesArrayAdapter);
+        newDevicesListView.setOnItemClickListener(mDeviceClickListener);
 
 
         // Register for broadcasts when a device is discovered
@@ -105,12 +125,36 @@ public class DeviceListActivity extends Activity {
 
     }
 
-    /* The broadcastReceiver that listens for sidcovered devices and changes the title when
+    /**
+     * The on-click listener for all devives in the ListViews
+     */
+    private AdapterView.OnItemClickListener mDeviceClickListener
+            = new AdapterView.OnItemClickListener() {
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
+            // Cancel discovery because it's costly and we're about to connect
+            mBtAdapter.cancelDiscovery();
+
+            //Get the device MAC address, which is the last 17 chars in the View
+            String info = ((TextView) v).getText().toString();
+            String address = info.substring(info.length() - 17);
+
+            // Create the result Intent and include the MAC address
+            Intent intent = new Intent();
+            intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
+
+            // Set result and finish this Activity
+            setResult(Activity.RESULT_OK, intent);
+            finish();
+        }
+    };
+
+    /* The broadcastReceiver that listens for discovered devices and changes the title when
     discovery is finished */
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+
             // When discovery finds a device
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 // get the BluetoothDevice object from the Intent
@@ -118,6 +162,14 @@ public class DeviceListActivity extends Activity {
                 // If it's already paired, skip it, because it's been listed already
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
                     mNewDevicesArrayAdapter.add(device.getName() + '\n' + device.getAddress());
+                }
+                //When discovery is finished, change the Activity title
+            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+                setProgressBarIndeterminateVisibility(false);
+                setTitle(R.string.select_device);
+                if (mNewDevicesArrayAdapter.getCount() == 0) {
+                    String noDevices = getResources().getText(R.string.none_found).toString();
+                    mNewDevicesArrayAdapter.add(noDevices);
                 }
             }
         }

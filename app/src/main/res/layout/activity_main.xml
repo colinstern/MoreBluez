@@ -20,17 +20,12 @@
 
     </android.support.design.widget.AppBarLayout>
 
-<!--    <ScrollView
+    <ViewAnimator
+        android:id="@+id/sample_output"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="0px"
+        android:layout_weight="1">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="@string/intro_message"
-            android:id="@+id/textbox"/>
-
-    </ScrollView>-->
 
     <fragment
         android:name="sensors.morebluez.BluetoothFragment"
@@ -39,6 +34,13 @@
         android:layout_height="match_parent">
 
     </fragment>
+
+    </ViewAnimator>
+
+<View
+    android:layout_width="match_parent"
+    android:layout_height="1dp"
+    android:background="@android:color/holo_purple"/>
 
     <FrameLayout
         android:id="@+id/sample_content_fragment"

@@ -28,6 +28,7 @@ public class BluetoothService {
     private AcceptThread mSecureAcceptThread;
     private AcceptThread mInsecureAcceptThread;
     private ConnectedThread mConnectedThread;
+    private ConnectThread mConnectThread;
     private final Handler mHandler;
     private final ArrayList<String> mArrayList;
     private int mState;
@@ -67,6 +68,35 @@ public class BluetoothService {
             mSecureAcceptThread.start();
         }
     }
+
+    /**
+     * Start the ConnectThread to initate connection to a remote device.
+     *
+     * @param device
+     * @param secure
+     */
+    public synchronized void connect(BluetoothDevice device, boolean secure) {
+        // Cancel any thread attempting to make a connection
+        if (mState == STATE_CONNECTING) {
+            if (mConnectThread != null) {
+                mConnectedThread.cancel();
+                mConnectThread = null;
+            }
+        }
+
+        // Cancel any thread currently running a connection
+        if (mConnectedThread != null) {
+            mConnectedThread.cancel();
+            mConnectedThread = null;
+        }
+
+        // Start the thread to connect with the given device
+        mConnectThread = new ConnectThread(device);
+        mConnectedThread.start();
+        setState(STATE_CONNECTING);
+    }
+
+
     public synchronized void connected(BluetoothSocket socket, BluetoothDevice device) {
         mConnectedThread = new ConnectedThread(socket);
         mConnectedThread.start();
